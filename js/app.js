@@ -22,8 +22,7 @@ const formData = {
   contactCompany: '',
   contactName: '',
   contactPhone: '',
-  // 收货地址
-  customerAddress: '',
+  // 补充说明
   deliveryNote: ''
 };
 
@@ -51,6 +50,7 @@ function render() {
     case 'home':
       app.innerHTML = renderHome();
       bindHomeEvents();
+      updateCopyPreview();
       break;
     case 'orders':
       app.innerHTML = renderOrders();
@@ -59,6 +59,10 @@ function render() {
     case 'orderDetail':
       app.innerHTML = renderOrderDetail();
       bindOrderDetailEvents();
+      break;
+    case 'admin':
+      app.innerHTML = renderAdmin();
+      bindAdminEvents();
       break;
   }
 }
@@ -164,22 +168,30 @@ function renderHome() {
           <input type="tel" class="input margin-top" data-field="contactPhone" placeholder="手机号 *" maxlength="11" required>
         </div>
 
-        <!-- 收货地址 -->
-        <div class="card">
-          <div class="card-header">📍 收货地址</div>
-          <input type="text" class="input" data-field="customerAddress" placeholder="例：广东省中山市小榄镇xxx路xx号 *" required>
-          <div class="hint">请填写完整收货地址，以便寄回样品或发货</div>
-        </div>
-
         <!-- 补充说明 -->
         <div class="card">
           <div class="card-header">📝 补充说明（选填）</div>
           <input type="text" class="input" data-field="deliveryNote" placeholder="如：特殊时间要求、注意事项等">
         </div>
 
+        <!-- 一键复制全部信息 -->
+        <div class="card">
+          <div class="card-header">📋 一键复制寄件信息</div>
+          <div class="copy-info" id="copyInfoBox">
+            <div class="copy-hint">点击下方按钮，复制全部信息用于寄快递</div>
+            <div class="copy-preview" id="copyPreview"></div>
+          </div>
+          <button type="button" class="btn-copy" id="copyAllBtn" onclick="copyAllInfo()">📋 一键复制全部信息</button>
+        </div>
+
         <!-- 提交按钮 -->
         <div class="submit-wrap">
           <button type="submit" class="btn-submit" id="submitBtn">提交询价 👉</button>
+        </div>
+
+        <!-- 商家入口 -->
+        <div class="submit-wrap" style="margin-top:12px;">
+          <button type="button" class="btn-admin" onclick="showAdminLogin()">🔐 商家入口</button>
         </div>
       </form>
     </div>
@@ -297,7 +309,6 @@ function renderOrderDetail() {
             <div class="detail-item"><label>公司</label><span>${order.contactCompany || '-'}</span></div>
             <div class="detail-item"><label>联系人</label><span>${order.contactName || '-'}</span></div>
             <div class="detail-item"><label>手机</label><span>${order.contactPhone || '-'}</span></div>
-            <div class="detail-item full"><label>收货地址</label><span>${order.customerAddress || '-'}</span></div>
           </div>
         </div>
 
@@ -331,6 +342,198 @@ function renderOrderDetail() {
       </div>
     </div>
   `;
+}
+
+// 商家后台
+function renderAdmin() {
+  const statusLabels = {
+    all: '全部订单',
+    pending: '待报价',
+    quoted: '待客户确认',
+    confirmed: '已完成'
+  };
+
+  const tabs = ['all', 'pending', 'quoted', 'confirmed'];
+  const currentTab = adminState.currentTab;
+
+  let filteredOrders = adminState.orders;
+  if (currentTab !== 'all') {
+    filteredOrders = adminState.orders.filter(o => o.status === currentTab);
+  }
+
+  return `
+    <div class="page-admin">
+      <header class="header">
+        <button class="back-btn" onclick="navigate('home')">← 返回</button>
+        <h1>🔐 商家后台</h1>
+        <button class="logout-btn" onclick="adminLogout()">退出</button>
+      </header>
+
+      <div class="admin-tabs">
+        ${tabs.map(tab => `
+          <button class="admin-tab ${currentTab === tab ? 'active' : ''}" onclick="switchAdminTab('${tab}')">
+            ${statusLabels[tab]}
+            <span class="tab-count">${tab === 'all' ? adminState.orders.length : adminState.orders.filter(o => o.status === tab).length}</span>
+          </button>
+        `).join('')}
+      </div>
+
+      <div class="admin-content">
+        ${adminState.loading ? '<div class="loading">加载中...</div>' : ''}
+        ${!adminState.loading && filteredOrders.length === 0 ? `
+          <div class="empty">
+            <div class="empty-icon">📋</div>
+            <p class="empty-text">暂无${statusLabels[currentTab]}</p>
+          </div>
+        ` : ''}
+        ${filteredOrders.map(order => `
+          <div class="admin-order-card" onclick="viewAdminOrderDetail('${order._id}')">
+            <div class="order-header">
+              <span class="order-id">#${order._id.slice(-6).toUpperCase()}</span>
+              <span class="order-status status-${order.status}">${statusLabels[order.status] || '未知'}</span>
+            </div>
+            <div class="order-params">
+              ${[order.spec, order.voltage, order.cct, order.ledCount ? order.ledCount + '颗' : '', order.targetPower ? order.targetPower + 'W' : ''].filter(Boolean).join(' · ')}
+            </div>
+            <div class="order-meta">
+              <span>${formatTime(order.createdAt)}</span>
+              <span>${order.contactName} · ${order.contactPhone}</span>
+            </div>
+            ${order.quote ? `
+              <div class="quote-summary">
+                <span>单价 ¥${order.quote.pricePerK}/K</span>
+                <span>总价 ¥${order.quote.totalNoTax}（未税）</span>
+              </div>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// 绑定商家后台事件
+function bindAdminEvents() {
+  // 事件绑定
+}
+
+// 商家状态
+const adminState = {
+  password: 'admin123',
+  isLoggedIn: false,
+  orders: [],
+  loading: false,
+  currentTab: 'all'
+};
+
+// 显示商家登录框
+function showAdminLogin() {
+  const password = prompt('请输入商家密码：');
+  if (password === adminState.password) {
+    adminState.isLoggedIn = true;
+    loadAdminOrders();
+    navigate('admin');
+  } else if (password !== null) {
+    alert('密码错误！');
+  }
+}
+
+// 退出商家后台
+function adminLogout() {
+  adminState.isLoggedIn = false;
+  adminState.orders = [];
+  adminState.currentTab = 'all';
+  navigate('home');
+}
+
+// 加载商家订单
+async function loadAdminOrders() {
+  adminState.loading = true;
+  render();
+
+  try {
+    const result = await API.callFunction('getOrders', { admin: true, tab: adminState.currentTab });
+    adminState.orders = result.orders || [];
+  } catch (err) {
+    console.error('加载订单失败:', err);
+    adminState.orders = [];
+  }
+
+  adminState.loading = false;
+  render();
+}
+
+// 切换商家后台Tab
+function switchAdminTab(tab) {
+  adminState.currentTab = tab;
+  loadAdminOrders();
+}
+
+// 查看商家订单详情
+function viewAdminOrderDetail(orderId) {
+  const order = adminState.orders.find(o => o._id === orderId);
+  if (order) {
+    orderState.currentOrder = order;
+    navigate('orderDetail');
+  }
+}
+
+// 更新复制预览
+function updateCopyPreview() {
+  const preview = document.getElementById('copyPreview');
+  if (!preview) return;
+
+  const info = buildCopyInfo();
+  preview.innerHTML = info.replace(/\n/g, '<br>');
+}
+
+// 构建复制信息文本
+function buildCopyInfo() {
+  const info = [
+    '【灯珠定制询价单】',
+    '',
+    `规格：${formData.spec || '-'}  电压：${formData.voltage || '-'}  色温：${formData.cct || '-'}`,
+    `灯珠数量：${formData.ledCount || '-'}颗  串并数：${formData.seriesParallel || '-'}`,
+    `方案类型：${formData.solutionType || '-'}  目标功率：${formData.targetPower ? formData.targetPower + 'W' : '-'}`,
+    `功率类型：${formData.powerType || '-'}`,
+    `产品应用：${formData.application || '-'}`,
+    `寄回样品：${formData.returnSample ? '是' : '否'}`,
+    '',
+    '【联系方式】',
+    `公司：${formData.contactCompany || '-'}`,
+    `联系人：${formData.contactName || '-'}`,
+    `手机：${formData.contactPhone || '-'}`,
+    '',
+    '【补充说明】',
+    `${formData.deliveryNote || '-'}`
+  ].filter(line => line !== undefined).join('\n');
+
+  return info;
+}
+
+// 一键复制全部信息
+async function copyAllInfo() {
+  const info = buildCopyInfo();
+
+  try {
+    await navigator.clipboard.writeText(info);
+    alert('已复制到剪贴板！');
+  } catch (err) {
+    // 降级方案
+    const textarea = document.createElement('textarea');
+    textarea.value = info;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      alert('已复制到剪贴板！');
+    } catch (e) {
+      alert('复制失败，请手动长按选择复制');
+    }
+    document.body.removeChild(textarea);
+  }
 }
 
 // 绑定首页事件
@@ -440,10 +643,6 @@ async function submitOrder() {
   }
   if (!formData.contactPhone) {
     alert('请填写手机号');
-    return;
-  }
-  if (!formData.customerAddress) {
-    alert('请填写收货地址');
     return;
   }
 

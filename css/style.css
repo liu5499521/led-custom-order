@@ -459,6 +459,154 @@ body {
 }
 
 /* Utility */
-.page-home, .page-orders, .page-detail {
+.page-home, .page-orders, .page-detail, .page-admin {
   min-height: 100vh;
+}
+
+/* 商家入口按钮 */
+.btn-admin {
+  width: 100%;
+  background: linear-gradient(135deg, #666666 0%, #999999 100%);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-admin:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* 一键复制区域 */
+.copy-info {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.copy-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.copy-preview {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.btn-copy {
+  width: 100%;
+  background: linear-gradient(135deg, #1890ff 0%, #69c0ff 100%);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.btn-copy:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.4);
+}
+
+/* 商家后台 */
+.page-admin {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.page-admin .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-admin .header h1 {
+  flex: 1;
+  text-align: center;
+}
+
+.logout-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-tabs {
+  display: flex;
+  padding: 12px 16px;
+  gap: 8px;
+  background: var(--card-bg);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-tab {
+  flex: 1;
+  min-width: fit-content;
+  background: var(--bg);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.admin-tab.active {
+  background: var(--primary);
+  color: white;
+}
+
+.tab-count {
+  background: rgba(0,0,0,0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.admin-tab.active .tab-count {
+  background: rgba(255,255,255,0.3);
+}
+
+.admin-content {
+  padding: 12px 16px;
+}
+
+.admin-order-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.admin-order-card:active {
+  transform: scale(0.98);
 }
