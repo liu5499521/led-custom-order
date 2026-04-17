@@ -1,0 +1,78 @@
+name: Deploy Cloud Functions
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          cd cloudfunctions
+          for dir in */; do
+            echo "Installing dependencies for $dir"
+            cd "$dir"
+            npm install 2>/dev/null || true
+            cd ..
+          done
+
+      - name: Deploy Cloud Functions
+        env:
+          APPID: ${{ secrets.WEAPP_APPID }}
+          PRIVATE_KEY_PATH: ${{ secrets.WEAPP_PRIVATE_KEY }}
+          ENV: ${{ secrets.WEAPP_ENV }}
+        run: |
+          npm install miniprogram-ci
+          
+          node -e "
+            const ci = require('miniprogram-ci');
+            const path = require('path');
+            const fs = require('fs');
+            
+            const project = new ci.Project({
+              appid: process.env.APPID,
+              type: 'miniProgram',
+              projectPath: '.',
+              privateKeyPath: 'private.key',
+              ignores: ['node_modules/**/*'],
+            });
+            
+            const fns = ['submitOrder', 'getOrders', 'confirmOrder', 'confirmPayment'];
+            
+            async function deploy() {
+              for (const fn of fns) {
+                try {
+                  console.log('Deploying ' + fn + '...');
+                  await ci.cloud.uploadFunction({
+                    project,
+                    env: process.env.ENV,
+                    name: fn,
+                    path: path.join('cloudfunctions', fn),
+                    remoteNpmInstall: false,
+                  });
+                  console.log(fn + ' deployed!');
+                } catch (e) {
+                  console.error(fn + ' failed:', e.message);
+                }
+              }
+            }
+            
+            // Write private key
+            fs.writeFileSync('private.key', process.env.PRIVATE_KEY_PATH);
+            deploy();
+          "
+
+      - name: Cleanup
+        run: rm -f private.key
