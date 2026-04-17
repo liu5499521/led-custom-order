@@ -1,0 +1,12 @@
+module.exports = {
+  formatTime: function(ts) {
+    if (!ts) return ""
+    var d = getDate(ts)
+    var y = d.getFullYear()
+    var m = (d.getMonth()+1 < 10 ? "0" : "") + (d.getMonth()+1)
+    var day = (d.getDate() < 10 ? "0" : "") + d.getDate()
+    var h = (d.getHours() < 10 ? "0" : "") + d.getHours()
+    var min = (d.getMinutes() < 10 ? "0" : "") + d.getMinutes()
+    return y + "-" + m + "-" + day + " " + h + ":" + min
+  }
+};

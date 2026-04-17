@@ -1,0 +1,172 @@
+<view class="page">
+  <!-- 标题 -->
+  <view class="page-title">💎 灯珠定制询价单</view>
+  <view class="page-sub">填写以下参数，提交后等待商家报价</view>
+
+  <!-- 入口导航 -->
+  <view class="entry-nav">
+    <view class="entry-btn entry-orders" bindtap="goOrders">
+      <text class="entry-icon">📋</text>
+      <text class="entry-label">我的订单</text>
+    </view>
+    <view class="entry-btn entry-admin" bindtap="goAdmin">
+      <text class="entry-icon">🔐</text>
+      <text class="entry-label">商家入口</text>
+    </view>
+  </view>
+
+  <!-- 灯珠规格 -->
+  <view class="card">
+    <view class="card-header">💡 灯珠规格</view>
+    <view class="chip-wrap">
+      <picker mode="selector" range="{{specs}}" bindchange="selectSpec">
+        <view class="picker-row">
+          <text>{{spec || '请选择规格'}}</text>
+          <text class="arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 电压 -->
+  <view class="card">
+    <view class="card-header">⚡ 电压</view>
+    <view class="chip-wrap">
+      <picker mode="selector" range="{{voltages}}" bindchange="selectVoltage">
+        <view class="picker-row">
+          <text>{{voltage || '请选择电压'}}</text>
+          <text class="arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 色温 -->
+  <view class="card">
+    <view class="card-header">🌈 色温</view>
+    <view class="chip-wrap">
+      <picker mode="selector" range="{{ccts}}" bindchange="selectCct">
+        <view class="picker-row">
+          <text>{{cct || '请选择色温'}}</text>
+          <text class="arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 灯珠数量 & 串并数 -->
+  <view class="card">
+    <view class="card-row">
+      <view class="card-row-item">
+        <view class="card-header">🔢 灯珠数量</view>
+        <input class="form-input" type="number" placeholder="如：240"
+          placeholder-class="input-placeholder"
+          data-field="ledCount" bindinput="bindInput" value="{{ledCount}}"/>
+      </view>
+      <view class="card-row-item">
+        <view class="card-header">🔗 串并数</view>
+        <input class="form-input" type="text" placeholder="如：三并24串"
+          placeholder-class="input-placeholder"
+          data-field="seriesParallel" bindinput="bindInput" value="{{seriesParallel}}"/>
+      </view>
+    </view>
+  </view>
+
+  <!-- 方案类型 & 目标功率 -->
+  <view class="card">
+    <view class="card-row">
+      <view class="card-row-item">
+        <view class="card-header">⚙️ 方案类型</view>
+        <picker mode="selector" range="{{solutions}}" bindchange="selectSolution">
+          <view class="picker-row">
+            <text>{{solutionType || '请选择'}}</text>
+            <text class="arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+      <view class="card-row-item">
+        <view class="card-header">🎯 目标功率(W)</view>
+        <input class="form-input" type="digit" placeholder="如：50"
+          placeholder-class="input-placeholder"
+          data-field="targetPower" bindinput="bindInput" value="{{targetPower}}"/>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功率类型 -->
+  <view class="card">
+    <view class="card-header">📊 功率类型</view>
+    <picker mode="selector" range="{{powerTypes}}" bindchange="selectPowerType">
+      <view class="picker-row">
+        <text>{{powerType || '请选择功率类型'}}</text>
+        <text class="arrow">▼</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 产品应用 -->
+  <view class="card">
+    <view class="card-header">🏷️ 产品应用</view>
+    <input class="form-input" type="text" placeholder="如：植物灯 / 美容灯 / 消毒灯 / 台灯"
+      placeholder-class="input-placeholder"
+      data-field="application" bindinput="bindInput" value="{{application}}"/>
+  </view>
+
+  <!-- 寄回样品 -->
+  <view class="card">
+    <view class="card-header">📦 寄回样品</view>
+    <view class="return-sample-wrap">
+      <checkbox-group bindchange="onReturnSampleChange">
+        <label class="checkbox-label">
+          <checkbox value="1" color="#e94560"/>
+          <text>需要寄回样品打样确认</text>
+        </label>
+      </checkbox-group>
+      <input class="form-input" wx:if="{{returnSample}}" type="text"
+        placeholder="样品描述（数量、尺寸等）"
+        placeholder-class="input-placeholder"
+        data-field="returnSampleDesc" bindinput="bindInput"/>
+    </view>
+  </view>
+
+  <!-- 联系方式 -->
+  <view class="card">
+    <view class="card-header">📞 联系方式</view>
+    <view class="contact-fields">
+      <input class="form-input" type="text" placeholder="公司名称（选填）"
+        placeholder-class="input-placeholder"
+        data-field="contactCompany" bindinput="bindInput"/>
+      <input class="form-input" type="text" placeholder="联系人 *"
+        placeholder-class="input-placeholder"
+        data-field="contactName" bindinput="bindInput"/>
+      <input class="form-input" type="number" maxlength="11" placeholder="手机号 *"
+        placeholder-class="input-placeholder"
+        data-field="contactPhone" bindinput="bindInput"/>
+    </view>
+  </view>
+
+  <!-- 收货地址 -->
+  <view class="card">
+    <view class="card-header">📍 收货地址</view>
+    <input class="form-input" type="text" placeholder="例：广东省中山市小榄镇xxx路xx号 *"
+      placeholder-class="input-placeholder"
+      data-field="customerAddress" bindinput="bindInput"/>
+    <view class="hint">请填写完整收货地址，以便寄回样品或发货</view>
+  </view>
+
+  <!-- 补充说明 -->
+  <view class="card">
+    <view class="card-header">📝 补充说明（选填）</view>
+    <input class="form-input" type="text" placeholder="如：特殊时间要求、注意事项等"
+      placeholder-class="input-placeholder"
+      data-field="deliveryNote" bindinput="bindInput"/>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="submit-wrap">
+    <button class="btn-submit" bindtap="submitOrder" hover-class="btn-hover"
+      disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '提交询价 👉'}}
+    </button>
+  </view>
+</view>

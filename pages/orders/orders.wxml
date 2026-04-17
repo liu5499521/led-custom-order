@@ -1,0 +1,134 @@
+<wxs module="utils" src="./utils.wxs" />
+<view class="page">
+  <view class="page-title">📋 我的订单</view>
+
+  <!-- 手机号查询入口 -->
+  <view class="phone-bar" wx:if="{{!phone}}">
+    <view class="phone-tip">📱 请先输入查询手机号</view>
+    <input class="phone-input" type="number" maxlength="11" placeholder="输入手机号"
+      bindinput="bindPhone" bindconfirm="loadOrders"/>
+    <button class="btn-query" bindtap="loadOrders">查询</button>
+  </view>
+
+  <!-- 已查询，显示订单 -->
+  <view wx:if="{{phone}}">
+    <view class="phone-info">
+      <text>📱 {{phone}}</text>
+      <text class="change-phone" bindtap="clearPhone">切换</text>
+    </view>
+
+    <!-- 标签栏 -->
+    <view class="tab-bar">
+      <view class="tab {{tab==='all'?'active':''}}" data-tab="all" bindtap="switchTab">全部</view>
+      <view class="tab {{tab==='pending'?'active':''}}" data-tab="pending" bindtap="switchTab">待报价</view>
+      <view class="tab {{tab==='quoted'?'active':''}}" data-tab="quoted" bindtap="switchTab">待付款</view>
+      <view class="tab {{tab==='paid'?'active':''}}" data-tab="paid" bindtap="switchTab">审核中</view>
+      <view class="tab {{tab==='confirmed'?'active':''}}" data-tab="confirmed" bindtap="switchTab">已完成</view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:if="{{!loading && orders.length === 0}}" class="empty">
+      <view class="empty-icon">📋</view>
+      <text class="empty-text">暂无订单记录</text>
+      <text class="empty-sub">提交询价后将显示在此处</text>
+    </view>
+
+    <view wx:if="{{loading}}" class="loading">加载中...</view>
+
+    <!-- 订单列表 -->
+    <block wx:for="{{orders}}" wx:key="_id">
+      <view class="order-card">
+        <view class="order-header">
+          <text class="order-id">#{{item._id.slice(-6).toUpperCase()}}</text>
+          <view class="order-status status-{{item.status}}">
+            {{item.status==='pending'?'待报价':item.status==='quoted'?'待付款':item.status==='paid'?'审核中':item.status==='confirmed'?'已完成':'未知'}}
+          </view>
+        </view>
+
+        <view class="order-params">
+          <text wx:if="{{item.spec}}">{{item.spec}}</text>
+          <text wx:if="{{item.voltage}}"> · {{item.voltage}}</text>
+          <text wx:if="{{item.cct}}"> · {{item.cct}}</text>
+          <text wx:if="{{item.ledCount}}"> · {{item.ledCount}}颗</text>
+          <text wx:if="{{item.targetPower}}"> · {{item.targetPower}}W</text>
+        </view>
+
+        <view class="order-meta">
+          <text>{{utils.formatTime(item.createdAt)}}</text>
+          <text>{{item.contactName}} · {{item.contactPhone}}</text>
+        </view>
+
+        <!-- 报价摘要 -->
+        <view class="quote-block" wx:if="{{item.quote}}">
+          <view class="quote-row">
+            <text>单价</text><text>¥{{item.quote.pricePerK}} / K</text>
+          </view>
+          <view class="quote-row">
+            <text>起订量</text><text>{{item.quote.minQty}} K</text>
+          </view>
+          <view class="quote-row">
+            <text>总价</text>
+            <text class="quote-total">¥{{item.quote.totalNoTax}}（未税）</text>
+          </view>
+          <view class="quote-deposit" wx:if="{{item.quote.deposit && item.status==='quoted'}}">
+            💰 定金（30%）：¥{{item.quote.deposit}}
+          </view>
+          <view class="quote-tag">{{item.quote.taxType}}</view>
+        </view>
+
+        <!-- 报价弹窗 -->
+        <view class="quote-popup" wx:if="{{showQuote && item._id === quoteOrderId}}">
+          <view class="popup-mask" bindtap="closeQuote"></view>
+          <view class="popup-content">
+            <view class="popup-hd">
+              <text>商家报价</text>
+              <text class="popup-close" bindtap="closeQuote">✕</text>
+            </view>
+            <view class="popup-body">
+              <view class="quote-row">
+                <text>单价</text><text>¥{{quoteDetail.pricePerK}} / K</text>
+              </view>
+              <view class="quote-row">
+                <text>起订量</text><text>{{quoteDetail.minQty}} K</text>
+              </view>
+              <view class="quote-row">
+                <text>税种</text><text>{{quoteDetail.taxType}}</text>
+              </view>
+              <view class="quote-row">
+                <text>未税总价</text><text class="total">¥{{quoteDetail.totalNoTax}}</text>
+              </view>
+              <view class="quote-row" wx:if="{{quoteDetail.taxAmount}}">
+                <text>税额（+8%）</text><text>¥{{quoteDetail.taxAmount}}</text>
+              </view>
+              <view class="quote-row" wx:if="{{quoteDetail.totalWithTax}}">
+                <text>含税总价</text><text class="total">¥{{quoteDetail.totalWithTax}}</text>
+              </view>
+              <view class="quote-deposit" wx:if="{{quoteDetail.deposit && item.status==='quoted'}}">
+                💰 定金（30%）：¥{{quoteDetail.deposit}}
+              </view>
+              <view class="quote-note" wx:if="{{quoteDetail.note}}">💬 备注：{{quoteDetail.note}}</view>
+
+              <!-- 支付宝收款 -->
+              <view class="pay-section" wx:if="{{item.status==='quoted'}}">
+                <view class="pay-title">💚 支付宝转账</view>
+                <image class="qr-img" src="../../alipay-qr.jpg" mode="aspectFit" bindtap="previewQR"/>
+                <view class="pay-tip">长按保存 → 打开支付宝扫一扫</view>
+                <view class="pay-amount">转账 ¥{{quoteDetail.deposit}}，备注：{{item._id.slice(-8).toUpperCase()}}</view>
+                <button class="btn-pay" data-deposit="{{quoteDetail.deposit}}" data-id="{{item._id}}" bindtap="payByAlipay">
+                  💚 我已转账，上传付款截图
+                </button>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 操作按钮 -->
+        <view class="order-btns">
+          <button class="btn-mini" size="mini" bindtap="viewQuote" data-order="{{item}}">查看报价</button>
+          <button wx:if="{{item.status==='quoted'}}" class="btn-confirm" size="mini"
+            bindtap="confirmOrder" data-id="{{item._id}}">确认报价 ✓</button>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

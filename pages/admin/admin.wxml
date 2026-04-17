@@ -1,0 +1,152 @@
+<view class="page">
+  <!-- 商家入口验证 -->
+  <view class="login-card" wx:if="{{!isAdmin}}">
+    <view class="login-icon">🔐</view>
+    <view class="login-title">商家后台</view>
+    <input class="login-input" type="text" password placeholder="输入商家密码"
+      id="adminPwdInput" bindinput="bindPwd" bindconfirm="doLogin"/>
+    <button class="btn-login" bindtap="doLogin">进入后台</button>
+  </view>
+
+  <!-- 商家后台主界面 -->
+  <block wx:if="{{isAdmin}}">
+    <view class="admin-header">
+      <text>👋 商家后台</text>
+      <view class="header-actions">
+        <text class="copy-merchant" bindtap="copyMerchantInfo">📋 一键复制</text>
+        <text class="logout" bindtap="logout">退出</text>
+      </view>
+    </view>
+
+    <!-- 标签栏 -->
+    <view class="tab-bar">
+      <view class="tab {{tab==='pending'?'active':''}}" data-tab="pending" bindtap="switchTab">待报价</view>
+      <view class="tab {{tab==='quoted'?'active':''}}" data-tab="quoted" bindtap="switchTab">已报价</view>
+      <view class="tab {{tab==='paid'?'active':''}}" data-tab="paid" bindtap="switchTab">待确认</view>
+      <view class="tab {{tab==='confirmed'?'active':''}}" data-tab="confirmed" bindtap="switchTab">已完成</view>
+    </view>
+
+    <!-- 订单列表 -->
+    <view wx:if="{{loading}}" class="loading">加载中...</view>
+    <view wx:if="{{!loading && orders.length === 0}}" class="empty">
+      <view class="empty-icon">📭</view><text>暂无订单</text>
+    </view>
+
+    <block wx:for="{{orders}}" wx:key="_id">
+      <view class="order-card">
+        <view class="order-header">
+          <view>
+            <text class="order-id">#{{item._id.slice(-6).toUpperCase()}}</text>
+            <text class="order-time">{{fmtDate(item.createdAt)}}</text>
+          </view>
+          <view class="order-status status-{{item.status}}">
+            {{item.status==='pending'?'待报价':item.status==='quoted'?'已报价':item.status==='paid'?'审核中':item.status==='confirmed'?'已完成':'未知'}}
+          </view>
+        </view>
+
+        <!-- 参数 -->
+        <view class="params-grid">
+          <text wx:if="{{item.spec}}">📦 {{item.spec}}</text>
+          <text wx:if="{{item.voltage}}">⚡ {{item.voltage}}</text>
+          <text wx:if="{{item.cct}}">🌈 {{item.cct}}</text>
+          <text wx:if="{{item.ledCount}}">🔢 {{item.ledCount}}颗</text>
+          <text wx:if="{{item.seriesParallel}}">🔗 {{item.seriesParallel}}</text>
+          <text wx:if="{{item.solutionType}}">⚙️ {{item.solutionType}}</text>
+          <text wx:if="{{item.targetPower}}">🎯 {{item.targetPower}}W</text>
+          <text wx:if="{{item.powerType}}">📊 {{item.powerType}}</text>
+          <text wx:if="{{item.application}}" class="full">🏷️ {{item.application}}</text>
+        </view>
+
+        <view class="divider"></view>
+
+        <!-- 联系方式 -->
+        <view class="contact-block">
+          <text class="contact-company" wx:if="{{item.contactCompany}}">{{item.contactCompany}}</text>
+          <text>{{item.contactName}} · {{item.contactPhone}}</text>
+        </view>
+
+        <!-- 收货地址 -->
+        <view class="addr-block">📍 {{item.customerAddress}}</view>
+
+        <!-- 寄回样品 -->
+        <view class="sample-block" wx:if="{{item.returnSample}}">
+          📦 需寄回样品：{{item.returnSampleDesc || '（见备注）'}}
+        </view>
+        <view class="sample-block" wx:if="{{item.deliveryNote}}">
+          📝 备注：{{item.deliveryNote}}
+        </view>
+
+        <!-- 已报价信息 -->
+        <view class="quoted-block" wx:if="{{item.quote}}">
+          <view class="quote-row"><text>单价</text><text>¥{{item.quote.pricePerK}} / K（未税）</text></view>
+          <view class="quote-row"><text>起订量</text><text>{{item.quote.minQty}} K</text></view>
+          <view class="quote-row">
+            <text>总价</text>
+            <text class="total">¥{{item.quote.totalNoTax}}</text>
+          </view>
+          <view class="quote-row">
+            <text>税额（+8%）</text>
+            <text>¥{{item.quote.taxAmount}}</text>
+          </view>
+          <view class="quote-row">
+            <text>含税总价</text>
+            <text class="total">¥{{item.quote.totalWithTax}}</text>
+          </view>
+          <view class="quote-row">
+            <text>定金（30%）</text>
+            <text class="deposit">¥{{item.quote.deposit}}</text>
+          </view>
+          <view wx:if="{{item.quote.note}}" class="quote-note">💬 备注：{{item.quote.note}}</view>
+          <view wx:if="{{item.status==='confirmed'}}" class="confirmed-tag">✅ 订单已完成</view>
+        </view>
+
+        <!-- 付款审核区（paid状态） -->
+        <view class="payment-review" wx:if="{{item.status==='paid' && item.paymentProof}}">
+          <view class="review-title">💳 客户已上传付款截图</view>
+          <view class="proof-actions">
+            <button class="btn-preview" size="mini" data-fileid="{{item.paymentProof}}" bindtap="previewPaymentProof">
+              👁️ 查看截图
+            </button>
+            <button class="btn-confirm-pay" size="mini" data-id="{{item._id}}" bindtap="confirmPayment">
+              ✅ 确认收款
+            </button>
+          </view>
+        </view>
+
+        <!-- 报价操作区 -->
+        <view class="quote-form" wx:if="{{item.status==='pending'}}">
+          <view class="quote-title">📝 填写报价</view>
+          <view class="form-row">
+            <text>单价(K)</text>
+            <input class="qi-input" type="digit" placeholder="¥"
+              data-id="{{item._id}}" data-field="pricePerK" bindinput="bindQuoteField"/>
+          </view>
+          <view class="form-row">
+            <text>起订量(K)</text>
+            <input class="qi-input" type="digit" placeholder="K"
+              data-id="{{item._id}}" data-field="minQty" bindinput="bindQuoteField"/>
+          </view>
+          <view class="form-row">
+            <text>含税/未税</text>
+            <picker mode="selector" range="{{taxTypes}}" bindchange="bindTaxTypeChange">
+              <view class="qi-picker">{{taxTypes[taxTypeIndex[item._id] || 1]}}</view>
+            </picker>
+          </view>
+          <view class="calc-preview" wx:if="{{quoteFields[item._id]}}">
+            <view>未税总价：¥<text class="total">{{quoteFields[item._id].totalNoTax || '-'}}</text></view>
+            <view wx:if="{{quoteFields[item._id].taxType==='含税'}}">
+              含税总价：¥<text class="total">{{quoteFields[item._id].totalWithTax || '-'}}</text>
+            </view>
+            <view>定金（30%）：¥<text class="deposit">{{quoteFields[item._id].deposit || '-'}}</text></view>
+          </view>
+          <view class="form-row">
+            <text>备注</text>
+            <input class="qi-input" type="text" placeholder="可选"
+              data-id="{{item._id}}" data-field="note" bindinput="bindQuoteField"/>
+          </view>
+          <button class="btn-quote" data-id="{{item._id}}" bindtap="submitQuote">提交报价</button>
+        </view>
+      </view>
+    </block>
+  </block>
+</view>
